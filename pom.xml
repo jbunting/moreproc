@@ -2,13 +2,13 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.bunting.prochelp</groupId>
-  <artifactId>prochelp</artifactId>
+  <groupId>io.bunting.moreproc</groupId>
+  <artifactId>moreproc</artifactId>
   <version>0.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>prochelp</name>
-  <url>http://maven.apache.org</url>
+  <name>moreproc</name>
+  <url>https://github.com/jbunting/moreproc</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -40,6 +40,7 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>2.4</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
