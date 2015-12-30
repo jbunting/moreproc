@@ -4,6 +4,8 @@ import org.spockframework.util.IoUtil
 import spock.lang.Specification
 
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.function.Function
 
 /**
@@ -12,21 +14,26 @@ import java.util.function.Function
 class EnhancedProcessBuilderTest extends Specification
 {
 
-	def "start process"()
+	def "start process and get value from callback"()
 	{
 		given: "we have a script"
 			def script = "src/test/scripts/simple.sh"
 		expect: "it exists"
 			new File(script).getAbsoluteFile().isFile()
-		and: "process exits successfully"
+		and: "process creates successfully"
 			def builder = new EnhancedProcessBuilder(script, "first arg")
-			def output
-			Callable<Integer> callable = builder.create({ process ->
+			def output = "<no value set here yet>"
+			ProcessCallable<Integer> callable = builder.create({ process ->
 				output = IoUtil.getText(process.getInputStream())
 				def value = process.exitValue()
 				println "Exit value: " + Integer.toBinaryString(value)
 				return value
 			})
+		when: "process gotten before launch we get a timeout exception"
+			callable.get(0, TimeUnit.SECONDS)
+		then:
+			thrown TimeoutException
+		expect: "calling the process gives the proper response"
 			callable.call() == 0
 			output == "Hello folks...\nArg first arg\n"
 	}

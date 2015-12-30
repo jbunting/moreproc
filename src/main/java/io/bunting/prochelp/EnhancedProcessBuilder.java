@@ -37,7 +37,7 @@ public class EnhancedProcessBuilder
 		return options.invokeSynchronously(completion);
 	}
 
-	public <T> Callable<T> create(final Function<EnhancedProcess, T> completion)
+	public <T> ProcessCallable<T> create(final Function<EnhancedProcess, T> completion)
 	{
 		return options.create(completion);
 	}

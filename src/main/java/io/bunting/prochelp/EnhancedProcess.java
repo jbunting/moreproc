@@ -15,7 +15,7 @@ import org.apache.commons.io.IOUtils;
 /**
  * TODO: Document this class
  */
-public class EnhancedProcess
+public class EnhancedProcess extends Process
 {
 	private final long pid;
 	private final OutputStream in;
@@ -40,41 +40,49 @@ public class EnhancedProcess
 		return this.pid;
 	}
 
+	@Override
 	public OutputStream getOutputStream()
 	{
 		return this.in;
 	}
 
+	@Override
 	public InputStream getInputStream()
 	{
 		return this.out;
 	}
 
+	@Override
 	public InputStream getErrorStream()
 	{
 		return this.err;
 	}
 
+	@Override
 	public boolean waitFor(final long timeout, final TimeUnit unit) throws InterruptedException
 	{
 		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
 	}
 
+	@Override
 	public int waitFor() throws InterruptedException
 	{
 		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
 	}
 
+	@Override
 	public EnhancedProcess destroyForcibly()
 	{
 		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
 	}
 
+	@Override
 	public void destroy()
 	{
 		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
 	}
 
+	@Override
 	public int exitValue()
 	{
 		checkForExit();
@@ -85,6 +93,7 @@ public class EnhancedProcess
 		return exitValue;
 	}
 
+	@Override
 	public boolean isAlive()
 	{
 		checkForExit();

@@ -10,9 +10,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
 
 import jnr.enxio.channels.NativeDeviceChannel;
 import jnr.enxio.channels.NativeSelectorProvider;
@@ -97,7 +102,7 @@ class EnhancedProcessOptions
 		return this.doCreate(completion, this::doStart).call();
 	}
 
-	public <T> Callable<T> create(Function<EnhancedProcess, T> completion)
+	public <T> ProcessCallable<T> create(Function<EnhancedProcess, T> completion)
 	{
 		return this.doCreate(completion, this::doStart);
 	}
@@ -114,7 +119,7 @@ class EnhancedProcessOptions
 		return Collections.emptyList();
 	}
 
-	private class EnhancedProcessInvoker<T> implements Callable<T>
+	private class EnhancedProcessInvoker<T> extends AbstractSettableFuture<EnhancedProcess> implements ProcessCallable<T>
 	{
 		private final List<Monitor> monitors;
 		private final Function<EnhancedProcess, T> completion;
@@ -127,11 +132,17 @@ class EnhancedProcessOptions
 			this.processStarter = processStarter;
 		}
 
+		@Nonnull
+		@Override
+		protected EnhancedProcess computeValue() throws Exception
+		{
+			return processStarter.invoke();
+		}
+
 		@Override
 		public T call() throws InterruptedException
 		{
-			final EnhancedProcess process;
-			process = processStarter.invoke();
+			final EnhancedProcess process = this.doCompute();
 
 			for (Monitor monitor : monitors)
 			{
