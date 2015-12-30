@@ -32,11 +32,6 @@ public class EnhancedProcessBuilder
 		this.options = new EnhancedProcessOptions(Arrays.asList(commands));
 	}
 
-	public <T> T invokeSynchronously(final Function<EnhancedProcess, T> completion) throws InterruptedException
-	{
-		return options.invokeSynchronously(completion);
-	}
-
 	public <T> ProcessCallable<T> create(final Function<EnhancedProcess, T> completion)
 	{
 		return options.create(completion);

@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import jnr.constants.platform.Signal;
 import jnr.constants.platform.WaitFlags;
 import jnr.posix.POSIX;
 
@@ -31,6 +32,7 @@ public class EnhancedProcess extends Process
 		this.out = out;
 		this.err = err;
 		this.posix = posix;
+		System.out.println("pid: " + pid);
 	}
 
 	public long getPid()
@@ -96,13 +98,30 @@ public class EnhancedProcess extends Process
 	@Override
 	public EnhancedProcess destroyForcibly()
 	{
-		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
+		posix.kill((int) pid, Signal.SIGKILL.intValue());
+		try
+		{
+			this.waitFor();
+		}
+		catch (InterruptedException e)
+		{
+			throw new RuntimeException("Interrupted.", e);
+		}
+		return this;
 	}
 
 	@Override
 	public void destroy()
 	{
-		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
+		posix.kill((int) pid, Signal.SIGTERM.intValue());
+		try
+		{
+			this.waitFor();
+		}
+		catch (InterruptedException e)
+		{
+			throw new RuntimeException("Interrupted.", e);
+		}
 	}
 
 	@Override
@@ -132,9 +151,23 @@ public class EnhancedProcess extends Process
 
 		int[] status = new int[1];
 		final int waitpid = posix.waitpid(pid, status, WaitFlags.WNOHANG.intValue());
+		System.out.println("waitpid: " + waitpid);
 		if (waitpid != 0)
 		{
-			exitValue = status[0] >> 8;
+			if ((status[0] & 0x000F) == 0)
+			{
+				// exited normally
+				System.out.println("setting exit status ( " + Integer.toHexString(status[0]) + " )");
+				exitValue = (status[0] >> 8) & 0x00FF;
+			}
+			else
+			{
+				// killed by signal
+				System.out.println("setting exit status due to kill by signal ( " + Integer.toHexString(status[0]) + " )");
+				System.out.println("-- " + Integer.toHexString(status[0] & 0x00FF));
+				System.out.println("-- " + Integer.toHexString((status[0] & 0x00FF) | 0x0080));
+				exitValue = (status[0] & 0x00FF) | 0x0080;
+			}
 		}
 	}
 }

@@ -97,11 +97,6 @@ class EnhancedProcessOptions
 		return new EnhancedProcess(pid, in, out, err, posix);
 	}
 
-	public <T> T invokeSynchronously(Function<EnhancedProcess, T> completion) throws InterruptedException
-	{
-		return this.doCreate(completion, this::doStart).call();
-	}
-
 	public <T> ProcessCallable<T> create(Function<EnhancedProcess, T> completion)
 	{
 		return this.doCreate(completion, this::doStart);
@@ -150,6 +145,7 @@ class EnhancedProcessOptions
 			}
 			while (process.isAlive())
 			{
+				System.out.println("is alive");
 				for (Monitor monitor : monitors)
 				{
 					monitor.update(process);
@@ -160,6 +156,7 @@ class EnhancedProcessOptions
 			{
 				monitor.cleanup(process);
 			}
+			System.out.println("applying completion");
 			return completion.apply(process);
 		}
 	}
