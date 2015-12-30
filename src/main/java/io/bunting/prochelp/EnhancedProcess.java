@@ -10,8 +10,6 @@ import java.util.concurrent.TimeUnit;
 import jnr.constants.platform.WaitFlags;
 import jnr.posix.POSIX;
 
-import org.apache.commons.io.IOUtils;
-
 /**
  * TODO: Document this class
  */
