@@ -23,7 +23,9 @@ class EnhancedProcessBuilderTest extends Specification
 		and: "process creates successfully"
 			def builder = new EnhancedProcessBuilder(script, "first arg")
 			def output = "<no value set here yet>"
+			def pid = -1
 			ProcessCallable<Integer> callable = builder.create({ process ->
+				pid = process.getPid()
 				output = IoUtil.getText(process.getInputStream())
 				def value = process.exitValue()
 				println "Exit value: " + Integer.toBinaryString(value)
@@ -36,5 +38,6 @@ class EnhancedProcessBuilderTest extends Specification
 		expect: "calling the process gives the proper response"
 			callable.call() == 0
 			output == "Hello folks...\nArg first arg\n"
+			pid > 0
 	}
 }
