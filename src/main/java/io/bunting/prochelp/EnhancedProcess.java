@@ -59,13 +59,38 @@ public class EnhancedProcess extends Process
 	@Override
 	public boolean waitFor(final long timeout, final TimeUnit unit) throws InterruptedException
 	{
-		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
+		long abortTime = System.currentTimeMillis() + unit.toMillis(timeout);
+		checkForExit();
+		while (exitValue == -1 && abortTime >= System.currentTimeMillis())
+		{
+			if (useDefaultSleep(timeout, unit))
+			{
+				unit.sleep(timeout);
+			}
+			else
+			{
+				TimeUnit.MILLISECONDS.sleep(100);
+			}
+			checkForExit();
+		}
+		return exitValue != -1;
+	}
+
+	private boolean useDefaultSleep(final long timeout, final TimeUnit unit)
+	{
+		return TimeUnit.MILLISECONDS.toNanos(100) < unit.toNanos(timeout);
 	}
 
 	@Override
 	public int waitFor() throws InterruptedException
 	{
-		throw new UnsupportedOperationException("Jared hasn't implemented this yet...");
+		checkForExit();
+		while (exitValue == -1)
+		{
+			TimeUnit.MILLISECONDS.sleep(100);
+			checkForExit();
+		}
+		return exitValue;
 	}
 
 	@Override

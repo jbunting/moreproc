@@ -154,8 +154,7 @@ class EnhancedProcessOptions
 				{
 					monitor.update(process);
 				}
-				Thread.sleep(100);
-//				process.waitFor(100, TimeUnit.MILLISECONDS);
+				process.waitFor(100, TimeUnit.MILLISECONDS);
 			}
 			for (Monitor monitor : monitors)
 			{
