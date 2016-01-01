@@ -4,6 +4,7 @@ import org.spockframework.util.IoUtil
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -15,6 +16,7 @@ import java.util.function.Function
 class EnhancedProcessBuilderTest extends Specification
 {
 	def static script = "src/test/scripts/simple.sh"
+	def static input_script = "src/test/scripts/simple_input.sh"
 
 	@Unroll
 	def "start process using #constructor and get value from callback"()
@@ -126,5 +128,69 @@ class EnhancedProcessBuilderTest extends Specification
 			process.getPid() == pid
 			output == ""
 			errout == ""
+	}
+
+	def "try to get exit value before process exits"()
+	{
+		expect: "it exists"
+			new File(script).getAbsoluteFile().isFile()
+		and: "process creates successfully"
+			def builder = new EnhancedProcessBuilder(script, "first arg")
+			ProcessCallable<Integer> callable = builder.create({ process ->
+				def value = process.exitValue()
+				return value
+			})
+		when: "calling the process async and then requesting exit value before it is complete"
+			def exitCode = -1;
+			new Timer().schedule({ exitCode = callable.call(); println "done!" }, 1000)
+
+			def process = callable.get()
+			process.exitValue()
+		then: "illegal thread state exception is thrown"
+			thrown IllegalThreadStateException
+	}
+
+	def "wait for a process for awhile, causing the default exit pollin in waitFor to be used"()
+	{
+		expect: "it exists"
+			new File(script).getAbsoluteFile().isFile()
+		and: "process creates successfully"
+			def builder = new EnhancedProcessBuilder(script, "first arg")
+			ProcessCallable<Integer> callable = builder.create({ process ->
+				def value = process.exitValue()
+				return value
+			})
+		and: "calling the process async and then waiting a really long time nothing fails"
+			def exitCode = -1;
+			new Timer().schedule({ exitCode = callable.call(); println "done!" }, 1000)
+
+			def process = callable.get()
+			process.waitFor(2, TimeUnit.SECONDS)
+	}
+
+	def "run a process that requires input"()
+	{
+		expect: "it exists"
+			new File(input_script).getAbsoluteFile().isFile()
+		and: "process creates successfully"
+			def builder = new EnhancedProcessBuilder(input_script)
+			def output = "<no value set here yet>"
+			ProcessCallable<Integer> callable = builder.create({ process ->
+				output = IoUtil.getText(process.getInputStream())
+				def value = process.exitValue()
+				return value
+			})
+		when: "calling the process async and then passing input"
+			def exitCode = -1;
+			new Timer().schedule( { exitCode = callable.call(); println "done!" }, 1000)
+
+			def process = callable.get()
+
+			process.getOutputStream().withWriter {it.write("stuff")}
+		then: "we get the input back in the output"
+			process.waitFor() == 0
+			output == "Hello folks...\nstuff\n"
+
+
 	}
 }

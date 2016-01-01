@@ -67,11 +67,11 @@ public class EnhancedProcess extends Process
 		{
 			if (useDefaultSleep(timeout, unit))
 			{
-				unit.sleep(timeout);
+				TimeUnit.MILLISECONDS.sleep(100);
 			}
 			else
 			{
-				TimeUnit.MILLISECONDS.sleep(100);
+				unit.sleep(timeout);
 			}
 			checkForExit();
 		}
