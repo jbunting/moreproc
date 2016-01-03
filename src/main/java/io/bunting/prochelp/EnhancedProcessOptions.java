@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 
+import io.bunting.prochelp.PipeHandler.Stream;
 import jnr.enxio.channels.NativeDeviceChannel;
 import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.posix.POSIX;
@@ -34,9 +35,6 @@ import static jnr.posix.SpawnFileAction.dup;
  */
 class EnhancedProcessOptions
 {
-	private static final int PIPE_READ_SIDE = 0;
-	private static final int PIPE_WRITE_SIDE = 1;
-
 	private final POSIX posix = POSIXFactory.getPOSIX();
 	private final List<String> commands;
 
@@ -47,21 +45,9 @@ class EnhancedProcessOptions
 
 	private EnhancedProcess doStart()
 	{
-		// for each stream we want to create in the child process, we have to:
-		// 1. create a pipe
-		// 2. duplicate the child's side when spawning the process
-		// 3. close the parent's side when spawning the process
-		// 4. close the child's side in the parent after the process is spawned
-		// 5. convert the parent's side to a usable channel or stream on the parent's side
-
-		int[] stdin = new int[2];
-		int[] stdout = new int[2];
-		int[] stderr = new int[2];
-
-		// Step 1
-		posix.pipe(stdin);
-		posix.pipe(stdout);
-		posix.pipe(stderr);
+		final PipeHandler inPipeHandler = new DefaultPipeHandler();
+		final PipeHandler outPipeHandler = new DefaultPipeHandler();
+		final PipeHandler errPipeHandler = new DefaultPipeHandler();
 
 		// we have to create the environment variables manually
 		List<String> childEnvVars = System.getenv().entrySet()
@@ -69,30 +55,20 @@ class EnhancedProcessOptions
 		                          .map(e -> e.getKey() + "=" + e.getValue())
 		                          .collect(Collectors.toList());
 
-		List<SpawnFileAction> spawnFileActions = Arrays.asList(
-				// Step 2
-				dup(stdin[PIPE_READ_SIDE], 0),
-				dup(stdout[PIPE_WRITE_SIDE], 1),
-				dup(stderr[PIPE_WRITE_SIDE], 2),
-				// Step 3
-				close(stdin[PIPE_WRITE_SIDE]),
-				close(stdout[PIPE_READ_SIDE]),
-				close(stderr[PIPE_READ_SIDE])
-		);
+		List<SpawnFileAction> spawnFileActions = new ArrayList<>();
+
+		spawnFileActions.addAll(inPipeHandler.init(posix, Stream.IN));
+		spawnFileActions.addAll(outPipeHandler.init(posix, Stream.OUT));
+		spawnFileActions.addAll(errPipeHandler.init(posix, Stream.ERR));
+
 		long pid = posix.posix_spawnp(commands.get(0),
 		                              spawnFileActions,
 		                              commands,
 		                              childEnvVars);
 
-		// Step 4
-		posix.close(stdin[PIPE_READ_SIDE]);
-		posix.close(stdout[PIPE_WRITE_SIDE]);
-		posix.close(stderr[PIPE_WRITE_SIDE]);
-
-		// Step 5
-		final OutputStream in = Channels.newOutputStream(new NativeDeviceChannel(NativeSelectorProvider.getInstance(), stdin[1], SelectionKey.OP_WRITE));
-		final InputStream out = Channels.newInputStream(new NativeDeviceChannel(NativeSelectorProvider.getInstance(), stdout[0], SelectionKey.OP_READ));
-		final InputStream err = Channels.newInputStream(new NativeDeviceChannel(NativeSelectorProvider.getInstance(), stderr[0], SelectionKey.OP_READ));
+		final OutputStream in = Channels.newOutputStream(inPipeHandler.afterSpawn(posix, Stream.IN));
+		final InputStream out = Channels.newInputStream(outPipeHandler.afterSpawn(posix, Stream.OUT));
+		final InputStream err = Channels.newInputStream(errPipeHandler.afterSpawn(posix, Stream.ERR));
 
 		return new EnhancedProcess(pid, in, out, err, posix);
 	}
