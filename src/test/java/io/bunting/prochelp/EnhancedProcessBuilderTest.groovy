@@ -79,16 +79,11 @@ class EnhancedProcessBuilderTest extends Specification
 		then:
 			thrown TimeoutException
 		expect: "calling the process async and then killing gives no response"
-			def exitCode = -1;
-			new Timer().schedule({ exitCode = callable.call(); println "done!" }, 1000)
+			def future = executor.submit(callable)
 
 			def process = callable.get()
 			process.destroy();
-			while (exitCode == -1)
-			{
-				TimeUnit.MILLISECONDS.sleep(100)
-			}
-			exitCode == 0x008F
+			future.get() == 0x008F
 			process.getPid() == pid
 			output == ""
 			errout == ""
@@ -118,16 +113,11 @@ class EnhancedProcessBuilderTest extends Specification
 		then:
 			thrown TimeoutException
 		expect: "calling the process async and then killing gives no response"
-			def exitCode = -1;
-			new Timer().schedule({ exitCode = callable.call(); println "done!" }, 1000)
+			def future = executor.submit(callable)
 
 			def process = callable.get()
 			process.destroyForcibly();
-			while (exitCode == -1)
-			{
-				TimeUnit.MILLISECONDS.sleep(100)
-			}
-			exitCode == 0x0089
+			future.get() == 0x0089
 			process.getPid() == pid
 			output == ""
 			errout == ""
