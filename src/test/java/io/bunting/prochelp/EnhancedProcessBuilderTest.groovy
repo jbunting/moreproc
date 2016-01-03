@@ -6,6 +6,8 @@ import spock.lang.Unroll
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.function.Function
@@ -17,6 +19,7 @@ class EnhancedProcessBuilderTest extends Specification
 {
 	def static script = "src/test/scripts/simple.sh"
 	def static input_script = "src/test/scripts/simple_input.sh"
+	def static executor = Executors.newCachedThreadPool()
 
 	@Unroll
 	def "start process using #constructor and get value from callback"()
@@ -181,14 +184,11 @@ class EnhancedProcessBuilderTest extends Specification
 				return value
 			})
 		when: "calling the process async and then passing input"
-			def exitCode = -1;
-			new Timer().schedule( { exitCode = callable.call(); println "done!" }, 1000)
-
+			def future = executor.submit(callable)
 			def process = callable.get()
-
 			process.getOutputStream().withWriter {it.write("stuff")}
 		then: "we get the input back in the output"
-			process.waitFor() == 0
+			future.get() == 0
 			output == "Hello folks...\nstuff\n"
 
 
