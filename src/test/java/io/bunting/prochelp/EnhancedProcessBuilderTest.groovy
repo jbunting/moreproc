@@ -20,6 +20,7 @@ class EnhancedProcessBuilderTest extends Specification
 	def static script = "src/test/scripts/simple.sh"
 	def static input_script = "src/test/scripts/simple_input.sh"
 	def static executor = Executors.newCachedThreadPool()
+	def static delayedExecutor = Executors.newSingleThreadScheduledExecutor()
 
 	@Unroll
 	def "start process using #constructor and get value from callback"()
@@ -79,7 +80,7 @@ class EnhancedProcessBuilderTest extends Specification
 		then:
 			thrown TimeoutException
 		expect: "calling the process async and then killing gives no response"
-			def future = executor.submit(callable)
+			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
 
 			def process = callable.get()
 			process.destroy();
@@ -113,7 +114,7 @@ class EnhancedProcessBuilderTest extends Specification
 		then:
 			thrown TimeoutException
 		expect: "calling the process async and then killing gives no response"
-			def future = executor.submit(callable)
+			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
 
 			def process = callable.get()
 			process.destroyForcibly();
@@ -134,8 +135,7 @@ class EnhancedProcessBuilderTest extends Specification
 				return value
 			})
 		when: "calling the process async and then requesting exit value before it is complete"
-			def exitCode = -1;
-			new Timer().schedule({ exitCode = callable.call(); println "done!" }, 1000)
+			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
 
 			def process = callable.get()
 			process.exitValue()
@@ -155,7 +155,7 @@ class EnhancedProcessBuilderTest extends Specification
 			})
 		and: "calling the process async and then waiting a really long time nothing fails"
 			def exitCode = -1;
-			new Timer().schedule({ exitCode = callable.call(); println "done!" }, 1000)
+			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
 
 			def process = callable.get()
 			process.waitFor(2, TimeUnit.SECONDS)
