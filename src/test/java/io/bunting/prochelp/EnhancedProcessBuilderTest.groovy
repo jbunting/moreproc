@@ -1,6 +1,7 @@
 package io.bunting.prochelp
 
 import org.spockframework.util.IoUtil
+import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -180,7 +181,26 @@ class EnhancedProcessBuilderTest extends Specification
 		then: "we get the input back in the output"
 			future.get() == 0
 			output == "Hello folks...\nstuff\n"
+	}
 
-
+	@Ignore("This is one of the key usecases, but we need to flesh out basic process builder functionality first.")
+	def "run a process and pass in streams"()
+	{
+		given: "streams"
+			def stdin = new ByteArrayInputStream("stuff".getBytes(StandardCharsets.UTF_8))
+			def stdout = new ByteArrayOutputStream()
+			def stderr = new ByteArrayOutputStream()
+		expect: "process creates successfully"
+			def builder = new EnhancedProcessBuilder(input_script)
+			ProcessCallable<Integer> callable = builder
+					.withIn(stdin)
+					.withOut(stdout)
+					.withErr(stderr)
+					.create({ process -> process.exitValue() })
+		when: "process is run"
+			executor.submit(callable).get()
+		then: "outputs contain expected content"
+			stdout.toString(StandardCharsets.UTF_8.name()) == "Hello folks...\nstuff\n"
+			stderr.toString(StandardCharsets.UTF_8.name()) == "This is error text\n"
 	}
 }
