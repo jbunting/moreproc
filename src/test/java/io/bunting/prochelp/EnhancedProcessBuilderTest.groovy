@@ -214,4 +214,39 @@ class EnhancedProcessBuilderTest extends Specification
 			exitValue == 0
 		    out.getText(StandardCharsets.UTF_8.name()) == "Hello folks...\nArg my arg\n"
 	}
+
+	def "run a process and append output to file"()
+	{
+		given: "a file"
+			def out = new File(tmpDir, "out")
+			out.write("Initial Text.\n")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectOutput(Redirect.appendTo(out)).create({ process -> process.exitValue() }).call()
+		then: "it writes to the out file"
+			exitValue == 0
+			out.getText(StandardCharsets.UTF_8.name()) == "Initial Text.\nHello folks...\nArg my arg\n"
+	}
+
+	def "run a process and redirect error to file"()
+	{
+		given: "a file"
+			def err = new File(tmpDir, "err")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectError(err).create({ process -> process.exitValue() }).call()
+		then: "it writes to the err file"
+			exitValue == 0
+			err.getText(StandardCharsets.UTF_8.name()) == "This is error text\n"
+	}
+
+	def "run a process and append error to file"()
+	{
+		given: "a file"
+			def err = new File(tmpDir, "err")
+			err.write("Initial Text.\n")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectError(Redirect.appendTo(err)).create({ process -> process.exitValue() }).call()
+		then: "it writes to the err file"
+			exitValue == 0
+			err.getText(StandardCharsets.UTF_8.name()) == "Initial Text.\nThis is error text\n"
+	}
 }

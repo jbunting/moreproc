@@ -115,11 +115,11 @@ public class EnhancedProcessBuilder
 //		return delegate.environment();
 //	}
 //
-//	public EnhancedProcessBuilder redirectError(final Redirect destination)
-//	{
-//		delegate.redirectError(destination);
-//		return this;
-//	}
+	public EnhancedProcessBuilder redirectError(final Redirect destination)
+	{
+		options.setErrorHandler(fromRedirect(destination));
+		return this;
+	}
 //
 //	public List<String> command()
 //	{
@@ -152,10 +152,10 @@ public class EnhancedProcessBuilder
 			throw new UnsupportedOperationException("Redirect type " + redirect.type() + " not supported.");
 		}
 	}
-//
-//	public EnhancedProcessBuilder redirectError(final File file)
-//	{
-//		delegate.redirectError(file);
-//		return this;
-//	}
+
+	public EnhancedProcessBuilder redirectError(final File file)
+	{
+		this.redirectError(Redirect.to(file));
+		return this;
+	}
 }

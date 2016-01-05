@@ -28,11 +28,18 @@ class EnhancedProcessOptions
 {
 	private final POSIX posix = POSIXFactory.getPOSIX();
 	private final List<String> commands;
+	private Supplier<PipeHandler> inPipeHandlerSupplier = DefaultPipeHandler::new;
 	private Supplier<PipeHandler> outPipeHandlerSupplier = DefaultPipeHandler::new;
+	private Supplier<PipeHandler> errPipeHandlerSupplier = DefaultPipeHandler::new;
 
 	EnhancedProcessOptions(final List<String> commands)
 	{
 		this.commands = commands;
+	}
+
+	void setInputHandler(final Supplier<PipeHandler> inPipeHandlerSupplier)
+	{
+		this.inPipeHandlerSupplier = inPipeHandlerSupplier;
 	}
 
 	void setOutputHandler(final Supplier<PipeHandler> outputHandlerSupplier)
@@ -40,11 +47,16 @@ class EnhancedProcessOptions
 		this.outPipeHandlerSupplier = outputHandlerSupplier;
 	}
 
+	void setErrorHandler(final Supplier<PipeHandler> errPipeHandlerSupplier)
+	{
+		this.errPipeHandlerSupplier = errPipeHandlerSupplier;
+	}
+
 	private EnhancedProcess doStart()
 	{
-		final PipeHandler inPipeHandler = new DefaultPipeHandler();
+		final PipeHandler inPipeHandler = inPipeHandlerSupplier.get();
 		final PipeHandler outPipeHandler = outPipeHandlerSupplier.get();
-		final PipeHandler errPipeHandler = new DefaultPipeHandler();
+		final PipeHandler errPipeHandler = errPipeHandlerSupplier.get();
 
 		// we have to create the environment variables manually
 		List<String> childEnvVars = System.getenv().entrySet()
