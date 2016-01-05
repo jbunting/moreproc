@@ -249,4 +249,20 @@ class EnhancedProcessBuilderTest extends Specification
 			exitValue == 0
 			err.getText(StandardCharsets.UTF_8.name()) == "Initial Text.\nThis is error text\n"
 	}
+
+	def "run a process and redirect input from file"()
+	{
+		given: "a file"
+			def inFile = new File(tmpDir, "in")
+			inFile.write("my input")
+		when: "i run the process"
+			def callable = new EnhancedProcessBuilder(input_script, "my arg")
+					.redirectInput(inFile)
+					.create({ process -> process.exitValue() })
+			def exitValue = callable
+					.call()
+		then: "it gets its input from the in file"
+			exitValue == 0
+			callable.get().getInputStream().getText(StandardCharsets.UTF_8.name()) == "Hello folks...\nmy input\n"
+	}
 }

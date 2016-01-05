@@ -49,12 +49,12 @@ public class EnhancedProcessBuilder
 //		return this;
 //	}
 //
-//	public EnhancedProcessBuilder redirectInput(final Redirect source)
-//	{
-//		delegate.redirectInput(source);
-//		return this;
-//	}
-//
+	public EnhancedProcessBuilder redirectInput(final Redirect source)
+	{
+		options.setInputHandler(fromRedirect(source));
+		return this;
+	}
+
 //	public EnhancedProcessBuilder command(final String... command)
 //	{
 //		delegate.command(command);
@@ -77,11 +77,10 @@ public class EnhancedProcessBuilder
 //		return this;
 //	}
 //
-//	public EnhancedProcessBuilder redirectInput(final File file)
-//	{
-//		delegate.redirectInput(file);
-//		return this;
-//	}
+	public EnhancedProcessBuilder redirectInput(final File file)
+	{
+		return this.redirectInput(Redirect.from(file));
+	}
 //
 //	public File directory()
 //	{
