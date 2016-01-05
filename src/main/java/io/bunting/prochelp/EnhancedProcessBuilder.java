@@ -1,10 +1,14 @@
 package io.bunting.prochelp;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
+import io.bunting.prochelp.Redirect.Type;
 
 /**
  * An enhanced version of {@link ProcessBuilder}. Should be a clean replacement for the JDK's builtin process builder.
@@ -45,12 +49,12 @@ public class EnhancedProcessBuilder
 //		return this;
 //	}
 //
-//	public EnhancedProcessBuilder redirectInput(final Redirect source)
-//	{
-//		delegate.redirectInput(source);
-//		return this;
-//	}
-//
+	public EnhancedProcessBuilder redirectInput(final Redirect source)
+	{
+		options.setInputHandler(fromRedirect(source));
+		return this;
+	}
+
 //	public EnhancedProcessBuilder command(final String... command)
 //	{
 //		delegate.command(command);
@@ -73,11 +77,10 @@ public class EnhancedProcessBuilder
 //		return this;
 //	}
 //
-//	public EnhancedProcessBuilder redirectInput(final File file)
-//	{
-//		delegate.redirectInput(file);
-//		return this;
-//	}
+	public EnhancedProcessBuilder redirectInput(final File file)
+	{
+		return this.redirectInput(Redirect.from(file));
+	}
 //
 //	public File directory()
 //	{
@@ -111,32 +114,47 @@ public class EnhancedProcessBuilder
 //		return delegate.environment();
 //	}
 //
-//	public EnhancedProcessBuilder redirectError(final Redirect destination)
-//	{
-//		delegate.redirectError(destination);
-//		return this;
-//	}
+	public EnhancedProcessBuilder redirectError(final Redirect destination)
+	{
+		options.setErrorHandler(fromRedirect(destination));
+		return this;
+	}
 //
 //	public List<String> command()
 //	{
 //		return delegate.command();
 //	}
 //
-//	public EnhancedProcessBuilder redirectOutput(final File file)
-//	{
-//		delegate.redirectOutput(file);
-//		return this;
-//	}
-//
-//	public EnhancedProcessBuilder redirectOutput(final Redirect destination)
-//	{
-//		delegate.redirectOutput(destination);
-//		return this;
-//	}
-//
-//	public EnhancedProcessBuilder redirectError(final File file)
-//	{
-//		delegate.redirectError(file);
-//		return this;
-//	}
+	public EnhancedProcessBuilder redirectOutput(final File file)
+	{
+		return this.redirectOutput(Redirect.to(file));
+	}
+
+	public EnhancedProcessBuilder redirectOutput(final Redirect destination)
+	{
+		options.setOutputHandler(fromRedirect(destination));
+		return this;
+	}
+
+	private Supplier<PipeHandler> fromRedirect(final Redirect redirect)
+	{
+		if (redirect.type() == Type.PIPE)
+		{
+			return DefaultPipeHandler::new;
+		}
+		else if (redirect.file() != null)
+		{
+			return () -> new FilePipeHandler(redirect.file(), redirect.type() == Type.APPEND);
+		}
+		else
+		{
+			throw new UnsupportedOperationException("Redirect type " + redirect.type() + " not supported.");
+		}
+	}
+
+	public EnhancedProcessBuilder redirectError(final File file)
+	{
+		this.redirectError(Redirect.to(file));
+		return this;
+	}
 }

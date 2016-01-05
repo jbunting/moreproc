@@ -1,5 +1,6 @@
 package io.bunting.prochelp
 
+import io.bunting.prochelp.util.TmpDir
 import org.spockframework.util.IoUtil
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -18,6 +19,9 @@ import java.util.function.Function
  */
 class EnhancedProcessBuilderTest extends Specification
 {
+	@TmpDir
+	def File tmpDir;
+
 	def static script = "src/test/scripts/simple.sh"
 	def static input_script = "src/test/scripts/simple_input.sh"
 	def static executor = Executors.newCachedThreadPool()
@@ -30,6 +34,9 @@ class EnhancedProcessBuilderTest extends Specification
 			new File(script).getAbsoluteFile().isFile()
 		and: "process creates successfully"
 			def builder = new EnhancedProcessBuilder(args)
+			builder.redirectInput(Redirect.PIPE)
+			builder.redirectOutput(Redirect.PIPE)
+			builder.redirectError(Redirect.PIPE)
 			def output = "<no value set here yet>"
 			def errout = "<no value set here yet>"
 			def pid = -1
@@ -198,5 +205,67 @@ class EnhancedProcessBuilderTest extends Specification
 		then: "outputs contain expected content"
 			stdout.toString(StandardCharsets.UTF_8.name()) == "Hello folks...\nstuff\n"
 			stderr.toString(StandardCharsets.UTF_8.name()) == "This is error text\n"
+	}
+
+	def "run a process and redirect output to file"()
+	{
+		given: "a file"
+			def out = new File(tmpDir, "out")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectOutput(out).create({ process -> process.exitValue() }).call()
+		then: "it writes to the out file"
+			exitValue == 0
+		    out.getText(StandardCharsets.UTF_8.name()) == "Hello folks...\nArg my arg\n"
+	}
+
+	def "run a process and append output to file"()
+	{
+		given: "a file"
+			def out = new File(tmpDir, "out")
+			out.write("Initial Text.\n")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectOutput(Redirect.appendTo(out)).create({ process -> process.exitValue() }).call()
+		then: "it writes to the out file"
+			exitValue == 0
+			out.getText(StandardCharsets.UTF_8.name()) == "Initial Text.\nHello folks...\nArg my arg\n"
+	}
+
+	def "run a process and redirect error to file"()
+	{
+		given: "a file"
+			def err = new File(tmpDir, "err")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectError(err).create({ process -> process.exitValue() }).call()
+		then: "it writes to the err file"
+			exitValue == 0
+			err.getText(StandardCharsets.UTF_8.name()) == "This is error text\n"
+	}
+
+	def "run a process and append error to file"()
+	{
+		given: "a file"
+			def err = new File(tmpDir, "err")
+			err.write("Initial Text.\n")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectError(Redirect.appendTo(err)).create({ process -> process.exitValue() }).call()
+		then: "it writes to the err file"
+			exitValue == 0
+			err.getText(StandardCharsets.UTF_8.name()) == "Initial Text.\nThis is error text\n"
+	}
+
+	def "run a process and redirect input from file"()
+	{
+		given: "a file"
+			def inFile = new File(tmpDir, "in")
+			inFile.write("my input")
+		when: "i run the process"
+			def callable = new EnhancedProcessBuilder(input_script, "my arg")
+					.redirectInput(inFile)
+					.create({ process -> process.exitValue() })
+			def exitValue = callable
+					.call()
+		then: "it gets its input from the in file"
+			exitValue == 0
+			callable.get().getInputStream().getText(StandardCharsets.UTF_8.name()) == "Hello folks...\nmy input\n"
 	}
 }

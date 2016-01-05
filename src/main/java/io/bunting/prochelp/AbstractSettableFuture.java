@@ -29,7 +29,7 @@ abstract class AbstractSettableFuture<V> implements Future<V>
 	 * Guarantees to invoke {@link #computeValue()} exactly once. If attempted to be invoked more than once, will throw an
 	 * {@link IllegalStateException}.
 	 */
-	protected final V doCompute()
+	protected final void doCompute()
 	{
 		synchronized (_lock)
 		{
@@ -51,7 +51,6 @@ abstract class AbstractSettableFuture<V> implements Future<V>
 			}
 			_lock.notifyAll();
 		}
-		return value;
 	}
 
 	/**

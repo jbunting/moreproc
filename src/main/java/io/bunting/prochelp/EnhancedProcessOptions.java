@@ -2,32 +2,23 @@ package io.bunting.prochelp;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
-import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import io.bunting.prochelp.PipeHandler.Stream;
-import jnr.enxio.channels.NativeDeviceChannel;
-import jnr.enxio.channels.NativeSelectorProvider;
 import jnr.posix.POSIX;
 import jnr.posix.POSIXFactory;
 import jnr.posix.SpawnFileAction;
-
-import static jnr.posix.SpawnFileAction.close;
-import static jnr.posix.SpawnFileAction.dup;
 
 /**
  * A class that holds the majority of the logic for {@link EnhancedProcessBuilder}. It exists so that this logic can be separated from the re-implementation of the JDK's
@@ -37,17 +28,35 @@ class EnhancedProcessOptions
 {
 	private final POSIX posix = POSIXFactory.getPOSIX();
 	private final List<String> commands;
+	private Supplier<PipeHandler> inPipeHandlerSupplier = DefaultPipeHandler::new;
+	private Supplier<PipeHandler> outPipeHandlerSupplier = DefaultPipeHandler::new;
+	private Supplier<PipeHandler> errPipeHandlerSupplier = DefaultPipeHandler::new;
 
 	EnhancedProcessOptions(final List<String> commands)
 	{
 		this.commands = commands;
 	}
 
+	void setInputHandler(final Supplier<PipeHandler> inPipeHandlerSupplier)
+	{
+		this.inPipeHandlerSupplier = inPipeHandlerSupplier;
+	}
+
+	void setOutputHandler(final Supplier<PipeHandler> outputHandlerSupplier)
+	{
+		this.outPipeHandlerSupplier = outputHandlerSupplier;
+	}
+
+	void setErrorHandler(final Supplier<PipeHandler> errPipeHandlerSupplier)
+	{
+		this.errPipeHandlerSupplier = errPipeHandlerSupplier;
+	}
+
 	private EnhancedProcess doStart()
 	{
-		final PipeHandler inPipeHandler = new DefaultPipeHandler();
-		final PipeHandler outPipeHandler = new DefaultPipeHandler();
-		final PipeHandler errPipeHandler = new DefaultPipeHandler();
+		final PipeHandler inPipeHandler = inPipeHandlerSupplier.get();
+		final PipeHandler outPipeHandler = outPipeHandlerSupplier.get();
+		final PipeHandler errPipeHandler = errPipeHandlerSupplier.get();
 
 		// we have to create the environment variables manually
 		List<String> childEnvVars = System.getenv().entrySet()
@@ -66,11 +75,35 @@ class EnhancedProcessOptions
 		                              commands,
 		                              childEnvVars);
 
-		final OutputStream in = Channels.newOutputStream(inPipeHandler.afterSpawn(posix, Stream.IN));
-		final InputStream out = Channels.newInputStream(outPipeHandler.afterSpawn(posix, Stream.OUT));
-		final InputStream err = Channels.newInputStream(errPipeHandler.afterSpawn(posix, Stream.ERR));
+		final OutputStream in = getOutputStream(pid, inPipeHandler.afterSpawn(posix, Stream.IN));
+		final InputStream out = getInputStream(pid, outPipeHandler.afterSpawn(posix, Stream.OUT));
+		final InputStream err = getInputStream(pid, errPipeHandler.afterSpawn(posix, Stream.ERR));
 
 		return new EnhancedProcess(pid, in, out, err, posix);
+	}
+
+	private OutputStream getOutputStream(final long pid, @Nullable final ByteChannel byteChannel)
+	{
+		if (byteChannel == null)
+		{
+			return new NullOutputStream(pid);
+		}
+		else
+		{
+			return Channels.newOutputStream(byteChannel);
+		}
+	}
+
+	private InputStream getInputStream(final long pid, @Nullable final ByteChannel byteChannel)
+	{
+		if (byteChannel == null)
+		{
+			return new NullInputStream(pid);
+		}
+		else
+		{
+			return Channels.newInputStream(byteChannel);
+		}
 	}
 
 	public <T> ProcessCallable<T> create(Function<EnhancedProcess, T> completion)
@@ -111,9 +144,11 @@ class EnhancedProcessOptions
 		}
 
 		@Override
-		public T call() throws InterruptedException
+		public T call() throws Exception
 		{
-			final EnhancedProcess process = this.doCompute();
+			this.doCompute();
+
+			final EnhancedProcess process = this.get();
 
 			for (Monitor monitor : monitors)
 			{
