@@ -8,7 +8,7 @@ import java.util.Objects;
  */
 public class Redirect
 {
-	public static enum Type
+	public enum Type
 	{
 		APPEND,
 		INHERIT,

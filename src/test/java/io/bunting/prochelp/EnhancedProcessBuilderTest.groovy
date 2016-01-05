@@ -34,6 +34,9 @@ class EnhancedProcessBuilderTest extends Specification
 			new File(script).getAbsoluteFile().isFile()
 		and: "process creates successfully"
 			def builder = new EnhancedProcessBuilder(args)
+			builder.redirectInput(Redirect.PIPE)
+			builder.redirectOutput(Redirect.PIPE)
+			builder.redirectError(Redirect.PIPE)
 			def output = "<no value set here yet>"
 			def errout = "<no value set here yet>"
 			def pid = -1
