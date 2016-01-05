@@ -39,7 +39,6 @@ class EnhancedProcessBuilderTest extends Specification
 				output = IoUtil.getText(process.getInputStream())
 				errout = IoUtil.getText(process.getErrorStream())
 				def value = process.exitValue()
-				println "Exit value: " + Integer.toBinaryString(value)
 				return value
 			})
 		when: "process gotten before launch we get a timeout exception"
@@ -67,13 +66,10 @@ class EnhancedProcessBuilderTest extends Specification
 			def errout = "<no value set here yet>"
 			def pid = -1
 			ProcessCallable<Integer> callable = builder.create({ process ->
-				println "completion called!"
 				pid = process.getPid()
-				println "pid: " + pid
 				output = IoUtil.getText(process.getInputStream())
 				errout = IoUtil.getText(process.getErrorStream())
 				def value = process.exitValue()
-				println "Exit value: " + Integer.toHexString(value)
 				return value
 			})
 		when: "process gotten before launch we get a timeout exception"
@@ -101,13 +97,10 @@ class EnhancedProcessBuilderTest extends Specification
 			def errout = "<no value set here yet>"
 			def pid = -1
 			ProcessCallable<Integer> callable = builder.create({ process ->
-				println "completion called!"
 				pid = process.getPid()
-				println "pid: " + pid
 				output = IoUtil.getText(process.getInputStream())
 				errout = IoUtil.getText(process.getErrorStream())
 				def value = process.exitValue()
-				println "Exit value: " + Integer.toHexString(value)
 				return value
 			})
 		when: "process gotten before launch we get a timeout exception"
@@ -159,7 +152,7 @@ class EnhancedProcessBuilderTest extends Specification
 			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
 
 			def process = callable.get()
-			process.waitFor(2, TimeUnit.SECONDS)
+			process.waitFor(20, TimeUnit.SECONDS)
 	}
 
 	def "run a process that requires input"()
