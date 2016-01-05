@@ -21,7 +21,6 @@ class EnhancedProcessBuilderTest extends Specification
 	def static script = "src/test/scripts/simple.sh"
 	def static input_script = "src/test/scripts/simple_input.sh"
 	def static executor = Executors.newCachedThreadPool()
-	def static delayedExecutor = Executors.newSingleThreadScheduledExecutor()
 
 	@Unroll
 	def "start process using #constructor and get value from callback"()
@@ -61,7 +60,7 @@ class EnhancedProcessBuilderTest extends Specification
 		expect: "it exists"
 			new File(script).getAbsoluteFile().isFile()
 		and: "process creates successfully"
-			def builder = new EnhancedProcessBuilder(script, "first arg")
+			def builder = new EnhancedProcessBuilder(input_script, "first arg")
 			def output = "<no value set here yet>"
 			def errout = "<no value set here yet>"
 			def pid = -1
@@ -77,14 +76,14 @@ class EnhancedProcessBuilderTest extends Specification
 		then:
 			thrown TimeoutException
 		expect: "calling the process async and then killing gives no response"
-			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
+			def future = executor.submit(callable)
 
 			def process = callable.get()
 			process.destroy();
+			process.getOutputStream().close()
 			future.get() == 0x008F
 			process.getPid() == pid
-			output == ""
-			errout == ""
+			// we don't actually care what the output and error streams look like, as it is somewhat non deterministic
 	}
 
 	def "start process and kill 9 it immediately"()
@@ -92,7 +91,7 @@ class EnhancedProcessBuilderTest extends Specification
 		expect: "it exists"
 			new File(script).getAbsoluteFile().isFile()
 		and: "process creates successfully"
-			def builder = new EnhancedProcessBuilder(script, "first arg")
+			def builder = new EnhancedProcessBuilder(input_script, "first arg")
 			def output = "<no value set here yet>"
 			def errout = "<no value set here yet>"
 			def pid = -1
@@ -108,14 +107,14 @@ class EnhancedProcessBuilderTest extends Specification
 		then:
 			thrown TimeoutException
 		expect: "calling the process async and then killing gives no response"
-			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
+			def future = executor.submit(callable)
 
 			def process = callable.get()
 			process.destroyForcibly();
+			process.getOutputStream().close()
 			future.get() == 0x0089
 			process.getPid() == pid
-			output == ""
-			errout == ""
+			// we don't actually care what the output and error streams look like, as it is somewhat non deterministic
 	}
 
 	def "try to get exit value before process exits"()
@@ -123,18 +122,20 @@ class EnhancedProcessBuilderTest extends Specification
 		expect: "it exists"
 			new File(script).getAbsoluteFile().isFile()
 		and: "process creates successfully"
-			def builder = new EnhancedProcessBuilder(script, "first arg")
+			def builder = new EnhancedProcessBuilder(input_script, "first arg")
 			ProcessCallable<Integer> callable = builder.create({ process ->
 				def value = process.exitValue()
 				return value
 			})
 		when: "calling the process async and then requesting exit value before it is complete"
-			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
+			def future = executor.submit(callable)
 
 			def process = callable.get()
 			process.exitValue()
 		then: "illegal thread state exception is thrown"
 			thrown IllegalThreadStateException
+		cleanup:
+			process.destroyForcibly()
 	}
 
 	def "wait for a process for awhile, causing the default exit pollin in waitFor to be used"()
@@ -142,17 +143,19 @@ class EnhancedProcessBuilderTest extends Specification
 		expect: "it exists"
 			new File(script).getAbsoluteFile().isFile()
 		and: "process creates successfully"
-			def builder = new EnhancedProcessBuilder(script, "first arg")
+			def builder = new EnhancedProcessBuilder(input_script, "first arg")
 			ProcessCallable<Integer> callable = builder.create({ process ->
 				def value = process.exitValue()
 				return value
 			})
 		and: "calling the process async and then waiting a really long time nothing fails"
 			def exitCode = -1;
-			def future = delayedExecutor.schedule(callable, 1, TimeUnit.SECONDS)
+			def future = executor.submit(callable)
 
 			def process = callable.get()
-			process.waitFor(20, TimeUnit.SECONDS)
+			!process.waitFor(2, TimeUnit.SECONDS)
+			process.getOutputStream().close()
+			process.waitFor(2, TimeUnit.SECONDS)
 	}
 
 	def "run a process that requires input"()
