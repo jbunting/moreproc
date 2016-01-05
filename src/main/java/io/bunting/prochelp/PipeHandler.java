@@ -2,6 +2,9 @@ package io.bunting.prochelp;
 
 import java.nio.channels.ByteChannel;
 import java.util.List;
+import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import jnr.posix.POSIX;
 import jnr.posix.SpawnFileAction;
@@ -13,6 +16,7 @@ interface PipeHandler
 {
 	List<SpawnFileAction> init(POSIX posix, Stream stream);
 
+	@Nullable
 	ByteChannel afterSpawn(POSIX posix, Stream stream);
 
 	enum Stream {

@@ -1,5 +1,6 @@
 package io.bunting.prochelp
 
+import io.bunting.prochelp.util.TmpDir
 import org.spockframework.util.IoUtil
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -18,6 +19,9 @@ import java.util.function.Function
  */
 class EnhancedProcessBuilderTest extends Specification
 {
+	@TmpDir
+	def File tmpDir;
+
 	def static script = "src/test/scripts/simple.sh"
 	def static input_script = "src/test/scripts/simple_input.sh"
 	def static executor = Executors.newCachedThreadPool()
@@ -198,5 +202,16 @@ class EnhancedProcessBuilderTest extends Specification
 		then: "outputs contain expected content"
 			stdout.toString(StandardCharsets.UTF_8.name()) == "Hello folks...\nstuff\n"
 			stderr.toString(StandardCharsets.UTF_8.name()) == "This is error text\n"
+	}
+
+	def "run a process and redirect output to file"()
+	{
+		given: "a file"
+			def out = new File(tmpDir, "out")
+		when: "i run the process"
+			def exitValue = new EnhancedProcessBuilder(script, "my arg").redirectOutput(out).create({ process -> process.exitValue() }).call()
+		then: "it writes to the out file"
+			exitValue == 0
+		    out.getText(StandardCharsets.UTF_8.name()) == "Hello folks...\nArg my arg\n"
 	}
 }

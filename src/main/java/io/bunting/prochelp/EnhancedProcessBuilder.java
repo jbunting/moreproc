@@ -1,10 +1,14 @@
 package io.bunting.prochelp;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
+import io.bunting.prochelp.Redirect.Type;
 
 /**
  * An enhanced version of {@link ProcessBuilder}. Should be a clean replacement for the JDK's builtin process builder.
@@ -122,17 +126,32 @@ public class EnhancedProcessBuilder
 //		return delegate.command();
 //	}
 //
-//	public EnhancedProcessBuilder redirectOutput(final File file)
-//	{
-//		delegate.redirectOutput(file);
-//		return this;
-//	}
-//
-//	public EnhancedProcessBuilder redirectOutput(final Redirect destination)
-//	{
-//		delegate.redirectOutput(destination);
-//		return this;
-//	}
+	public EnhancedProcessBuilder redirectOutput(final File file)
+	{
+		return this.redirectOutput(Redirect.to(file));
+	}
+
+	public EnhancedProcessBuilder redirectOutput(final Redirect destination)
+	{
+		options.setOutputHandler(fromRedirect(destination));
+		return this;
+	}
+
+	private Supplier<PipeHandler> fromRedirect(final Redirect redirect)
+	{
+		if (redirect.type() == Type.PIPE)
+		{
+			return DefaultPipeHandler::new;
+		}
+		else if (redirect.file() != null)
+		{
+			return () -> new FilePipeHandler(redirect.file(), redirect.type() == Type.APPEND);
+		}
+		else
+		{
+			throw new UnsupportedOperationException("Redirect type " + redirect.type() + " not supported.");
+		}
+	}
 //
 //	public EnhancedProcessBuilder redirectError(final File file)
 //	{
