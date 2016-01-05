@@ -11,11 +11,16 @@ import jnr.constants.platform.Signal;
 import jnr.constants.platform.WaitFlags;
 import jnr.posix.POSIX;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * TODO: Document this class
  */
 public class EnhancedProcess extends Process
 {
+	private static final Logger logger = LoggerFactory.getLogger(EnhancedProcess.class);
+
 	private final long pid;
 	private final OutputStream in;
 	private final InputStream out;
@@ -32,7 +37,7 @@ public class EnhancedProcess extends Process
 		this.out = out;
 		this.err = err;
 		this.posix = posix;
-		System.out.println("pid: " + pid);
+		logger.debug("Created process with pid {}.", pid);
 	}
 
 	public long getPid()
@@ -151,23 +156,22 @@ public class EnhancedProcess extends Process
 
 		int[] status = new int[1];
 		final int waitpid = posix.waitpid(pid, status, WaitFlags.WNOHANG.intValue());
-		System.out.println("waitpid: " + waitpid);
+		logger.trace("Process {} is running.", pid);
 		if (waitpid != 0)
 		{
 			if ((status[0] & 0x000F) == 0)
 			{
 				// exited normally
-				System.out.println("setting exit status ( " + Integer.toHexString(status[0]) + " )");
+				logger.debug("Received normal exit status 0x{} for process {}.", Integer.toHexString(status[0]), pid);
 				exitValue = (status[0] >> 8) & 0x00FF;
 			}
 			else
 			{
 				// killed by signal
-				System.out.println("setting exit status due to kill by signal ( " + Integer.toHexString(status[0]) + " )");
-				System.out.println("-- " + Integer.toHexString(status[0] & 0x00FF));
-				System.out.println("-- " + Integer.toHexString((status[0] & 0x00FF) | 0x0080));
+				logger.debug("Received 'killed by signal' exit status 0x{} for process {}.", Integer.toHexString(status[0]), pid);
 				exitValue = (status[0] & 0x00FF) | 0x0080;
 			}
+			logger.debug("Process {} exited with value {}.", pid, exitValue);
 		}
 	}
 }
