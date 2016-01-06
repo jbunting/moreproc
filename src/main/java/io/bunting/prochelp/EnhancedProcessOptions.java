@@ -4,6 +4,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +30,7 @@ class EnhancedProcessOptions
 {
 	private final POSIX posix = POSIXFactory.getPOSIX();
 	private final List<String> commands;
+	private final List<Monitor> monitors = new ArrayList<>();
 	private Supplier<PipeHandler> inPipeHandlerSupplier = DefaultPipeHandler::new;
 	private Supplier<PipeHandler> outPipeHandlerSupplier = DefaultPipeHandler::new;
 	private Supplier<PipeHandler> errPipeHandlerSupplier = DefaultPipeHandler::new;
@@ -75,14 +78,14 @@ class EnhancedProcessOptions
 		                              commands,
 		                              childEnvVars);
 
-		final OutputStream in = getOutputStream(pid, inPipeHandler.afterSpawn(posix, Stream.IN));
-		final InputStream out = getInputStream(pid, outPipeHandler.afterSpawn(posix, Stream.OUT));
-		final InputStream err = getInputStream(pid, errPipeHandler.afterSpawn(posix, Stream.ERR));
+		final ByteChannel in = inPipeHandler.afterSpawn(posix, Stream.IN, this::addMonitor);
+		final ByteChannel out = outPipeHandler.afterSpawn(posix, Stream.OUT, this::addMonitor);
+		final ByteChannel err = errPipeHandler.afterSpawn(posix, Stream.ERR, this::addMonitor);
 
 		return new EnhancedProcess(pid, in, out, err, posix);
 	}
 
-	private OutputStream getOutputStream(final long pid, @Nullable final ByteChannel byteChannel)
+	static OutputStream getOutputStream(final long pid, @Nullable final WritableByteChannel byteChannel)
 	{
 		if (byteChannel == null)
 		{
@@ -94,7 +97,7 @@ class EnhancedProcessOptions
 		}
 	}
 
-	private InputStream getInputStream(final long pid, @Nullable final ByteChannel byteChannel)
+	static InputStream getInputStream(final long pid, @Nullable final ReadableByteChannel byteChannel)
 	{
 		if (byteChannel == null)
 		{
@@ -113,14 +116,12 @@ class EnhancedProcessOptions
 
 	private <T> EnhancedProcessInvoker<T> doCreate(Function<EnhancedProcess, T> completion, final ProcessStarter processStarter)
 	{
-		final List<Monitor> monitors = detectMonitors();
-
 		return new EnhancedProcessInvoker<>(monitors, completion, processStarter);
 	}
 
-	private List<Monitor> detectMonitors()
+	private void addMonitor(Monitor monitor)
 	{
-		return Collections.emptyList();
+		this.monitors.add(monitor);
 	}
 
 	private class EnhancedProcessInvoker<T> extends AbstractSettableFuture<EnhancedProcess> implements ProcessCallable<T>

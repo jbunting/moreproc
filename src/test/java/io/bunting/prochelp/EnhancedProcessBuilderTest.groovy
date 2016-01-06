@@ -6,6 +6,7 @@ import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import java.nio.channels.Channels
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
@@ -186,13 +187,15 @@ class EnhancedProcessBuilderTest extends Specification
 			output == "Hello folks...\nstuff\n"
 	}
 
-	@Ignore("This is one of the key usecases, but we need to flesh out basic process builder functionality first.")
+//	@Ignore("This is one of the key usecases, but we need to flesh out basic process builder functionality first.")
 	def "run a process and pass in streams"()
 	{
 		given: "streams"
-			def stdin = new ByteArrayInputStream("stuff".getBytes(StandardCharsets.UTF_8))
-			def stdout = new ByteArrayOutputStream()
-			def stderr = new ByteArrayOutputStream()
+			def stdin = Channels.newChannel(new ByteArrayInputStream("stuff".getBytes(StandardCharsets.UTF_8)))
+			def outStream = new ByteArrayOutputStream()
+			def stdout = Channels.newChannel(outStream)
+			def errStream = new ByteArrayOutputStream()
+			def stderr = Channels.newChannel(errStream)
 		expect: "process creates successfully"
 			def builder = new EnhancedProcessBuilder(input_script)
 			ProcessCallable<Integer> callable = builder
@@ -203,8 +206,8 @@ class EnhancedProcessBuilderTest extends Specification
 		when: "process is run"
 			executor.submit(callable).get()
 		then: "outputs contain expected content"
-			stdout.toString(StandardCharsets.UTF_8.name()) == "Hello folks...\nstuff\n"
-			stderr.toString(StandardCharsets.UTF_8.name()) == "This is error text\n"
+			outStream.toString(StandardCharsets.UTF_8.name()) == "Hello folks...\nstuff\n"
+			errStream.toString(StandardCharsets.UTF_8.name()) == "This is error text\n"
 	}
 
 	def "run a process and redirect output to file"()

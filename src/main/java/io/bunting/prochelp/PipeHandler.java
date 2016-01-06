@@ -2,6 +2,7 @@ package io.bunting.prochelp;
 
 import java.nio.channels.ByteChannel;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -17,7 +18,7 @@ interface PipeHandler
 	List<SpawnFileAction> init(POSIX posix, Stream stream);
 
 	@Nullable
-	ByteChannel afterSpawn(POSIX posix, Stream stream);
+	ByteChannel afterSpawn(POSIX posix, Stream stream, Consumer<Monitor> monitorRegistrar);
 
 	enum Stream {
 		IN(0, true),

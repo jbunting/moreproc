@@ -1,10 +1,10 @@
 package io.bunting.prochelp;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.TimeUnit;
 
 import jnr.constants.platform.Signal;
@@ -22,15 +22,15 @@ public class EnhancedProcess extends Process
 	private static final Logger logger = LoggerFactory.getLogger(EnhancedProcess.class);
 
 	private final long pid;
-	private final OutputStream in;
-	private final InputStream out;
-	private final InputStream err;
+	private final WritableByteChannel in;
+	private final ReadableByteChannel out;
+	private final ReadableByteChannel err;
 
 	private final POSIX posix;
 
 	private int exitValue = -1;
 
-	EnhancedProcess(final long pid, final OutputStream in, final InputStream out, final InputStream err, final POSIX posix)
+	EnhancedProcess(final long pid, final WritableByteChannel in, final ReadableByteChannel out, final ReadableByteChannel err, final POSIX posix)
 	{
 		this.pid = pid;
 		this.in = in;
@@ -48,19 +48,19 @@ public class EnhancedProcess extends Process
 	@Override
 	public OutputStream getOutputStream()
 	{
-		return this.in;
+		return EnhancedProcessOptions.getOutputStream(this.pid, this.in);
 	}
 
 	@Override
 	public InputStream getInputStream()
 	{
-		return this.out;
+		return EnhancedProcessOptions.getInputStream(this.pid, this.out);
 	}
 
 	@Override
 	public InputStream getErrorStream()
 	{
-		return this.err;
+		return EnhancedProcessOptions.getInputStream(this.pid, this.err);
 	}
 
 	@Override

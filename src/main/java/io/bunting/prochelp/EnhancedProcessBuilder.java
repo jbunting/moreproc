@@ -2,6 +2,8 @@ package io.bunting.prochelp;
 
 import java.io.File;
 import java.io.OutputStream;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -142,6 +144,17 @@ public class EnhancedProcessBuilder
 		{
 			return DefaultPipeHandler::new;
 		}
+		else if (redirect.type() == Type.CHANNEL)
+		{
+			if (redirect.readChannel() != null)
+			{
+				return () -> new ReadableChannelPipeHandler(redirect.readChannel());
+			}
+			else
+			{
+				return () -> new WriteableChannelPipeHandler(redirect.writeChannel());
+			}
+		}
 		else if (redirect.file() != null)
 		{
 			return () -> new FilePipeHandler(redirect.file(), redirect.type() == Type.APPEND);
@@ -155,6 +168,25 @@ public class EnhancedProcessBuilder
 	public EnhancedProcessBuilder redirectError(final File file)
 	{
 		this.redirectError(Redirect.to(file));
+		return this;
+	}
+
+	public EnhancedProcessBuilder withIn(final ReadableByteChannel channel)
+	{
+		this.redirectInput(Redirect.from(channel));
+		return this;
+	}
+
+	public EnhancedProcessBuilder withOut(final WritableByteChannel channel)
+	{
+		this.redirectOutput(Redirect.to(channel));
+		return this;
+	}
+
+
+	public EnhancedProcessBuilder withErr(final WritableByteChannel channel)
+	{
+		this.redirectError(Redirect.to(channel));
 		return this;
 	}
 }

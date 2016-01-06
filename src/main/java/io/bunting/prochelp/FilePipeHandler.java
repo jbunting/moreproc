@@ -5,6 +5,7 @@ import java.nio.channels.ByteChannel;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import jnr.constants.platform.Errno;
 import jnr.constants.platform.OpenFlags;
@@ -55,7 +56,7 @@ class FilePipeHandler implements PipeHandler
 	}
 
 	@Override
-	public ByteChannel afterSpawn(final POSIX posix, final Stream stream)
+	public ByteChannel afterSpawn(final POSIX posix, final Stream stream, final Consumer<Monitor> monitorRegistrar)
 	{
 		posix.close(fd);
 		return null;
